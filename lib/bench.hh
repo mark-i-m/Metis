@@ -47,7 +47,7 @@ inline T round_up(T n, M b) {
 }
 
 template <typename T>
-inline T *safe_malloc(int n = 1) {
+inline T *safe_malloc(size_t n = 1) {
     void *x = malloc(sizeof(T) * n);
     assert(n == 0 || x);
     return (T *)x;
