@@ -64,16 +64,16 @@
 enum { block_based = 1 };
 
 struct mm2 : public mm {
-   mm2(int nsplit, bool block_based) : mm(nsplit, block_based) {}
-   void map_function_block(split_t *);
+    mm2(int nsplit, bool block_based) : mm(nsplit, block_based) {}
+    void map_function_block(split_t *);
 };
 
 /** Extract inner loop to make auto vectorization easier to analyze  */
 void processInnerLoop(int* out, int out_offset, int* mat_a, int a_offset, int *mat_b,
-                 int b_offset, int start, int end) {
+        int b_offset, int start, int end) {
     int a = mat_a[a_offset];
     for (int i = start; i < end; ++i)
-	out[out_offset + i] += a * mat_b[b_offset + i];
+        out[out_offset + i] += a * mat_b[b_offset + i];
 }
 
 /** Multiplies the allocated regions of matrix to compute partial sums */
@@ -87,15 +87,15 @@ void mm2::map_function_block(split_t *args) {
     int j = data->startcol;
     dprintf("do %d %d of %d\n", i, j, data->matrix_len);
     for (int k = 0; k < data->matrix_len; k += block_len) {
-	end_i = i + block_len;
-	end_j = j + block_len;
-	end_k = k + block_len;
-	int end = (end_j < data->matrix_len) ? end_j : data->matrix_len;
-	for (a = i; a < end_i && a < data->matrix_len; ++a)
+        end_i = i + block_len;
+        end_j = j + block_len;
+        end_k = k + block_len;
+        int end = (end_j < data->matrix_len) ? end_j : data->matrix_len;
+        for (a = i; a < end_i && a < data->matrix_len; ++a)
             for (c = k; c < end_k && c < data->matrix_len; ++c)
-	        processInnerLoop(data->output, data->matrix_len * a, data->matrix_A, 
-                                 data->matrix_len * a + c, data->matrix_B, 
-                                 data->matrix_len * c, j, end);
+                processInnerLoop(data->output, data->matrix_len * a, data->matrix_A, 
+                        data->matrix_len * a + c, data->matrix_B, 
+                        data->matrix_len * c, j, end);
     }
     dprintf("Finished Map task %d\n", data->row_num);
     fflush(stdout);
@@ -110,39 +110,39 @@ int main(int argc, char *argv[]) {
     int quiet = 0;
     srand((unsigned) time(NULL));
     if (argc < 2) {
-	usage(argv[0]);
-	exit(EXIT_FAILURE);
+        usage(argv[0]);
+        exit(EXIT_FAILURE);
     }
 
     int c;
     while ((c = getopt(argc, argv, "p:m:ql:")) != -1) {
-	switch (c) {
-	case 'p':
-	    assert((nprocs = atoi(optarg)) >= 0);
-	    break;
-	case 'm':
-	    map_tasks = atoi(optarg);
-	    break;
-	case 'q':
-	    quiet = 1;
-	    break;
-	case 'l':
-	    assert((matrix_len = atoi(optarg)) > 0);
-	    break;
-	default:
-	    usage(argv[0]);
-	    exit(EXIT_FAILURE);
-	}
+        switch (c) {
+            case 'p':
+                assert((nprocs = atoi(optarg)) >= 0);
+                break;
+            case 'm':
+                map_tasks = atoi(optarg);
+                break;
+            case 'q':
+                quiet = 1;
+                break;
+            case 'l':
+                assert((matrix_len = atoi(optarg)) > 0);
+                break;
+            default:
+                usage(argv[0]);
+                exit(EXIT_FAILURE);
+        }
     }
     matrix_A_ptr = safe_malloc<int>(matrix_len * matrix_len);
     matrix_B_ptr = safe_malloc<int>(matrix_len * matrix_len);
     fdata_out = safe_malloc<int>(matrix_len * matrix_len);
 
     for (int i = 0; i < matrix_len; i++)
-	for (int j = 0; j < matrix_len; j++) {
-	    matrix_A_ptr[i * matrix_len + j] = rand();
-	    matrix_B_ptr[i * matrix_len + j] = rand();
-	}
+        for (int j = 0; j < matrix_len; j++) {
+            matrix_A_ptr[i * matrix_len + j] = rand();
+            matrix_B_ptr[i * matrix_len + j] = rand();
+        }
 
     mapreduce_appbase::initialize();
     mm2 app(block_based ? 0 : map_tasks, block_based);
@@ -159,13 +159,13 @@ int main(int argc, char *argv[]) {
     app.sched_run();
     app.print_stats();
     if (!quiet) {
-	printf("First row of the output matrix:\n");
-	for (int i = 0; i < matrix_len; i++)
-	    printf("%d\t", fdata_out[i]);
-	printf("\nLast row of the output matrix:\n");
-	for (int i = 0; i < matrix_len; i++)
-	    printf("%d\t", fdata_out[(matrix_len - 1) * matrix_len + i]);
-	printf("\n");
+        printf("First row of the output matrix:\n");
+        for (int i = 0; i < matrix_len; i++)
+            printf("%d\t", fdata_out[i]);
+        printf("\nLast row of the output matrix:\n");
+        for (int i = 0; i < matrix_len; i++)
+            printf("%d\t", fdata_out[(matrix_len - 1) * matrix_len + i]);
+        printf("\n");
     }
     free(matrix_A_ptr);
     free(matrix_B_ptr);

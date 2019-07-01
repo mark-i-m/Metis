@@ -22,22 +22,22 @@ struct mm_key_t {
 };
 
 struct mm : public map_only {
-   mm(int nsplit, bool block_based) : nsplit_(nsplit), block_based_(block_based) {}
-   int key_compare(const void *v1, const void *v2);
-   bool split(split_t *ma, int ncores) {
-       return block_based_ ? split_block(ma, ncores) : split_nonblock(ma, ncores);
-   }
-   void map_function(split_t *ma) {
-       block_based_ ? map_function_block(ma) : map_function_nonblock(ma);
-   }
-   bool split_block(split_t *ma, int ncores);
-   bool split_nonblock(split_t *ma, int ncores);
-   virtual void map_function_block(split_t *ma);
-   void map_function_nonblock(split_t *ma);
-   
-   int nsplit_;
-   bool block_based_;
-   mm_data_t d_;
+    mm(int nsplit, bool block_based) : nsplit_(nsplit), block_based_(block_based) {}
+    int key_compare(const void *v1, const void *v2);
+    bool split(split_t *ma, int ncores) {
+        return block_based_ ? split_block(ma, ncores) : split_nonblock(ma, ncores);
+    }
+    void map_function(split_t *ma) {
+        block_based_ ? map_function_block(ma) : map_function_nonblock(ma);
+    }
+    bool split_block(split_t *ma, int ncores);
+    bool split_nonblock(split_t *ma, int ncores);
+    virtual void map_function_block(split_t *ma);
+    void map_function_nonblock(split_t *ma);
+
+    int nsplit_;
+    bool block_based_;
+    mm_data_t d_;
 };
 
 int mm::key_compare(const void *v1, const void *v2) {
@@ -59,15 +59,15 @@ bool mm::split_nonblock(split_t *out, int ncores) {
     *data_out = d_;
     /* Check whether the various terms exist */
     if (nsplit_ == 0)
-	nsplit_ = ncores * def_nsplits_per_core;
+        nsplit_ = ncores * def_nsplits_per_core;
     uint64_t split_size = d_.matrix_len / nsplit_;
     assert(d_.row_num <= d_.matrix_len);
     printf("Required units is %ld\n", split_size);
     /* Reached the end of the matrix */
     if (d_.row_num >= d_.matrix_len) {
-	fflush(stdout);
-	free(data_out);
-	return false;
+        fflush(stdout);
+        free(data_out);
+        return false;
     }
     /* Compute available rows */
     int available_rows = d_.matrix_len - d_.row_num;
@@ -86,20 +86,20 @@ void mm::map_function_nonblock(split_t *args) {
     assert(args && args->data);
     mm_data_t *data = (mm_data_t *)args->data;
     while (row_count < int(args->length)) {
-	a_ptr = data->matrix_A + (data->row_num + row_count) * data->matrix_len;
-	for (int i = 0; i < data->matrix_len; i++) {
-	    b_ptr = data->matrix_B + i;
-	    value = 0;
-	    for (int j = 0; j < data->matrix_len; j++) {
-		value += (a_ptr[j] * (*b_ptr));
-		b_ptr += data->matrix_len;
-	    }
-	    x_loc = (data->row_num + row_count);
-	    data->output[x_loc * data->matrix_len + i] = value;
-	    fflush(stdout);
-	}
-	dprintf("%d Loop\n", data->row_num);
-	row_count++;
+        a_ptr = data->matrix_A + (data->row_num + row_count) * data->matrix_len;
+        for (int i = 0; i < data->matrix_len; i++) {
+            b_ptr = data->matrix_B + i;
+            value = 0;
+            for (int j = 0; j < data->matrix_len; j++) {
+                value += (a_ptr[j] * (*b_ptr));
+                b_ptr += data->matrix_len;
+            }
+            x_loc = (data->row_num + row_count);
+            data->output[x_loc * data->matrix_len + i] = value;
+            fflush(stdout);
+        }
+        dprintf("%d Loop\n", data->row_num);
+        row_count++;
     }
     printf("Finished Map task %d\n", data->row_num);
     fflush(stdout);
@@ -114,16 +114,16 @@ bool mm::split_block(split_t *out, int ncore) {
     mm_data_t *data_out = safe_malloc<mm_data_t>();
     *data_out = d_;
     if (d_.startrow >= d_.matrix_len) {
-	free(data_out);
-	prof_leaveapp();
-	return false;
+        free(data_out);
+        prof_leaveapp();
+        return false;
     }
     /* Compute available rows */
     out->data = data_out;
     d_.startcol += block_len;
     if (d_.startcol > d_.matrix_len) {
-	d_.startrow += block_len;
-	d_.startcol = 0;
+        d_.startrow += block_len;
+        d_.startcol = 0;
     }
     prof_leaveapp();
     return true;
@@ -139,15 +139,15 @@ void mm::map_function_block(split_t * args) {
     int j = data->startcol;
     dprintf("do %d %d of %d\n", i, j, data->matrix_len);
     for (int k = 0; k < data->matrix_len; k += block_len) {
-	int end_i = i + block_len;
-	int end_j = j + block_len;
-	int end_k = k + block_len;
-	for (int a = i; a < end_i && a < data->matrix_len; a++)
-	    for (int b = j; b < end_j && b < data->matrix_len; b++)
-		for (int c = k; c < end_k && c < data->matrix_len; c++)
-		    data->output[data->matrix_len * a + b] +=
-			(data->matrix_A[data->matrix_len * a + c] *
-			 data->matrix_B[data->matrix_len * c + b]);
+        int end_i = i + block_len;
+        int end_j = j + block_len;
+        int end_k = k + block_len;
+        for (int a = i; a < end_i && a < data->matrix_len; a++)
+            for (int b = j; b < end_j && b < data->matrix_len; b++)
+                for (int c = k; c < end_k && c < data->matrix_len; c++)
+                    data->output[data->matrix_len * a + b] +=
+                        (data->matrix_A[data->matrix_len * a + c] *
+                         data->matrix_B[data->matrix_len * c + b]);
     }
     dprintf("Finished Map task %d\n", data->row_num);
     free(data);
