@@ -5,19 +5,19 @@
 enum { block_len = 32 };
 
 struct mm_data_t {
-    int row_num;
-    int startrow;
-    int startcol;
+    size_t row_num;
+    size_t startrow;
+    size_t startcol;
     int *matrix_A;
     int *matrix_B;
-    int matrix_len;
+    size_t matrix_len;
     int *output;
 };
 
 /** @brief: Coordinates and location for each value in the matrix */
 struct mm_key_t {
-    int x_loc;
-    int y_loc;
+    size_t x_loc;
+    size_t y_loc;
     int value;
 };
 
@@ -60,7 +60,7 @@ bool mm::split_nonblock(split_t *out, int ncores) {
     /* Check whether the various terms exist */
     if (nsplit_ == 0)
         nsplit_ = ncores * def_nsplits_per_core;
-    uint64_t split_size = d_.matrix_len / nsplit_;
+    size_t split_size = d_.matrix_len / nsplit_;
     assert(d_.row_num <= d_.matrix_len);
     printf("Required units is %ld\n", split_size);
     /* Reached the end of the matrix */
@@ -70,8 +70,8 @@ bool mm::split_nonblock(split_t *out, int ncores) {
         return false;
     }
     /* Compute available rows */
-    int available_rows = d_.matrix_len - d_.row_num;
-    out->length = (split_size < size_t(available_rows)) ? split_size : available_rows;
+    size_t available_rows = d_.matrix_len - d_.row_num;
+    out->length = (split_size < available_rows) ? split_size : available_rows;
     out->data = data_out;
     d_.row_num += out->length;
     dprintf("Allocated rows is %ld\n", out->length);
@@ -80,17 +80,18 @@ bool mm::split_nonblock(split_t *out, int ncores) {
 
 /** @brief: Multiplies the allocated regions of matrix to compute partial sums */
 void mm::map_function_nonblock(split_t *args) {
-    int row_count = 0, x_loc, value;
+    size_t row_count = 0, x_loc;
+    int value;
     int *a_ptr, *b_ptr;
     prof_enterapp();
     assert(args && args->data);
     mm_data_t *data = (mm_data_t *)args->data;
-    while (row_count < int(args->length)) {
+    while (row_count < size_t(args->length)) {
         a_ptr = data->matrix_A + (data->row_num + row_count) * data->matrix_len;
-        for (int i = 0; i < data->matrix_len; i++) {
+        for (size_t i = 0; i < data->matrix_len; i++) {
             b_ptr = data->matrix_B + i;
             value = 0;
-            for (int j = 0; j < data->matrix_len; j++) {
+            for (size_t j = 0; j < data->matrix_len; j++) {
                 value += (a_ptr[j] * (*b_ptr));
                 b_ptr += data->matrix_len;
             }
@@ -98,10 +99,10 @@ void mm::map_function_nonblock(split_t *args) {
             data->output[x_loc * data->matrix_len + i] = value;
             fflush(stdout);
         }
-        dprintf("%d Loop\n", data->row_num);
+        dprintf("%lu Loop\n", data->row_num);
         row_count++;
     }
-    printf("Finished Map task %d\n", data->row_num);
+    printf("Finished Map task %lu\n", data->row_num);
     fflush(stdout);
     free(data);
     prof_leaveapp();
@@ -134,22 +135,22 @@ void mm::map_function_block(split_t * args) {
     prof_enterapp();
     assert(args && args->data);
     mm_data_t *data = (mm_data_t *)args->data;
-    dprintf("%d Start Loop \n", data->row_num);
-    int i = data->startrow;
-    int j = data->startcol;
-    dprintf("do %d %d of %d\n", i, j, data->matrix_len);
-    for (int k = 0; k < data->matrix_len; k += block_len) {
-        int end_i = i + block_len;
-        int end_j = j + block_len;
-        int end_k = k + block_len;
-        for (int a = i; a < end_i && a < data->matrix_len; a++)
-            for (int b = j; b < end_j && b < data->matrix_len; b++)
-                for (int c = k; c < end_k && c < data->matrix_len; c++)
+    dprintf("%lu Start Loop \n", data->row_num);
+    size_t i = data->startrow;
+    size_t j = data->startcol;
+    dprintf("do %lu %lu of %lu\n", i, j, data->matrix_len);
+    for (size_t k = 0; k < data->matrix_len; k += block_len) {
+        size_t end_i = i + block_len;
+        size_t end_j = j + block_len;
+        size_t end_k = k + block_len;
+        for (size_t a = i; a < end_i && a < data->matrix_len; a++)
+            for (size_t b = j; b < end_j && b < data->matrix_len; b++)
+                for (size_t c = k; c < end_k && c < data->matrix_len; c++)
                     data->output[data->matrix_len * a + b] +=
                         (data->matrix_A[data->matrix_len * a + c] *
                          data->matrix_B[data->matrix_len * c + b]);
     }
-    dprintf("Finished Map task %d\n", data->row_num);
+    dprintf("Finished Map task %lu\n", data->row_num);
     free(data);
     prof_leaveapp();
 }

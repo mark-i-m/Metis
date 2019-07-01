@@ -69,42 +69,44 @@ struct mm2 : public mm {
 };
 
 /** Extract inner loop to make auto vectorization easier to analyze  */
-void processInnerLoop(int* out, int out_offset, int* mat_a, int a_offset, int *mat_b,
-        int b_offset, int start, int end) {
+void processInnerLoop(
+    int* out, size_t out_offset, int* mat_a, size_t a_offset, int *mat_b,
+    size_t b_offset, size_t start, size_t end
+) {
     int a = mat_a[a_offset];
-    for (int i = start; i < end; ++i)
+    for (size_t i = start; i < end; ++i)
         out[out_offset + i] += a * mat_b[b_offset + i];
 }
 
 /** Multiplies the allocated regions of matrix to compute partial sums */
 void mm2::map_function_block(split_t *args) {
-    int end_i, end_j, end_k, a, c;
+    size_t end_i, end_j, end_k, a, c;
     prof_enterapp();
     assert(args && args->data);
     mm_data_t *data = (mm_data_t *) (args->data);
-    dprintf("%d Start Loop \n", data->row_num);
-    int i = data->startrow;
-    int j = data->startcol;
-    dprintf("do %d %d of %d\n", i, j, data->matrix_len);
-    for (int k = 0; k < data->matrix_len; k += block_len) {
+    dprintf("%lu Start Loop \n", data->row_num);
+    size_t i = data->startrow;
+    size_t j = data->startcol;
+    dprintf("do %lu %lu of %lu\n", i, j, data->matrix_len);
+    for (size_t k = 0; k < data->matrix_len; k += block_len) {
         end_i = i + block_len;
         end_j = j + block_len;
         end_k = k + block_len;
-        int end = (end_j < data->matrix_len) ? end_j : data->matrix_len;
+        size_t end = (end_j < data->matrix_len) ? end_j : data->matrix_len;
         for (a = i; a < end_i && a < data->matrix_len; ++a)
             for (c = k; c < end_k && c < data->matrix_len; ++c)
                 processInnerLoop(data->output, data->matrix_len * a, data->matrix_A, 
                         data->matrix_len * a + c, data->matrix_B, 
                         data->matrix_len * c, j, end);
     }
-    dprintf("Finished Map task %d\n", data->row_num);
+    dprintf("Finished Map task %lu\n", data->row_num);
     fflush(stdout);
     free(data);
     prof_leaveapp();
 }
 
 int main(int argc, char *argv[]) {
-    int matrix_len = 0;
+    size_t matrix_len = 0;
     int *matrix_A_ptr, *matrix_B_ptr, *fdata_out;
     int nprocs = 0, map_tasks = 0;
     int quiet = 0;
@@ -138,8 +140,8 @@ int main(int argc, char *argv[]) {
     matrix_B_ptr = safe_malloc<int>(matrix_len * matrix_len);
     fdata_out = safe_malloc<int>(matrix_len * matrix_len);
 
-    for (int i = 0; i < matrix_len; i++)
-        for (int j = 0; j < matrix_len; j++) {
+    for (size_t i = 0; i < matrix_len; i++)
+        for (size_t j = 0; j < matrix_len; j++) {
             matrix_A_ptr[i * matrix_len + j] = rand();
             matrix_B_ptr[i * matrix_len + j] = rand();
         }
@@ -160,10 +162,10 @@ int main(int argc, char *argv[]) {
     app.print_stats();
     if (!quiet) {
         printf("First row of the output matrix:\n");
-        for (int i = 0; i < matrix_len; i++)
+        for (size_t i = 0; i < matrix_len; i++)
             printf("%d\t", fdata_out[i]);
         printf("\nLast row of the output matrix:\n");
-        for (int i = 0; i < matrix_len; i++)
+        for (size_t i = 0; i < matrix_len; i++)
             printf("%d\t", fdata_out[(matrix_len - 1) * matrix_len + i]);
         printf("\n");
     }
