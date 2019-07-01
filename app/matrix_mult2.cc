@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
     size_t matrix_len = 0;
     int *matrix_A_ptr, *matrix_B_ptr, *fdata_out;
     int nprocs = 0, map_tasks = 0;
-    int quiet = 0;
+    int quiet = 0, data_obliv = 0;
     srand((unsigned) time(NULL));
     if (argc < 2) {
         usage(argv[0]);
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
     }
 
     int c;
-    while ((c = getopt(argc, argv, "p:m:ql:")) != -1) {
+    while ((c = getopt(argc, argv, "p:m:ql:o")) != -1) {
         switch (c) {
             case 'p':
                 assert((nprocs = atoi(optarg)) >= 0);
@@ -131,6 +131,9 @@ int main(int argc, char *argv[]) {
             case 'l':
                 assert((matrix_len = atoi(optarg)) > 0);
                 break;
+            case 'o':
+                data_obliv = 1;
+                break;
             default:
                 usage(argv[0]);
                 exit(EXIT_FAILURE);
@@ -142,8 +145,8 @@ int main(int argc, char *argv[]) {
 
     for (size_t i = 0; i < matrix_len; i++)
         for (size_t j = 0; j < matrix_len; j++) {
-            matrix_A_ptr[i * matrix_len + j] = rand();
-            matrix_B_ptr[i * matrix_len + j] = rand();
+            matrix_A_ptr[i * matrix_len + j] = data_obliv ? 0 : rand();
+            matrix_B_ptr[i * matrix_len + j] = data_obliv ? 0 : rand();
         }
 
     mapreduce_appbase::initialize();
